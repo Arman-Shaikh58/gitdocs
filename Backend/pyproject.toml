@@ -12,5 +12,6 @@ dependencies = [
     "langchain-community>=0.3.29",
     "langchain-core>=0.3.76",
     "langchain-google-genai>=2.1.10",
+    "pymongo>=4.15.0",
     "python-dotenv>=1.1.1",
 ]
