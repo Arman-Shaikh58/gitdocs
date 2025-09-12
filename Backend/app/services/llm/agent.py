@@ -1,15 +1,9 @@
-from langchain.tools import StructuredTool
+from langchain.tools.base import StructuredTool
 from pydantic import BaseModel
 import os
 from typing import List,Dict 
 from pathlib import Path
-from langchain.tools import Tool
 
-TOOLS=[
-    
-]
-
-@Tool
 def read_files_content(filesName : List[str]) -> Dict[str, str]:
     """
     Use this tool for getting the content from the files.
@@ -24,7 +18,6 @@ def read_files_content(filesName : List[str]) -> Dict[str, str]:
             file_content[file] = content
     return file_content
 
-@Tool
 def read_folder_structure(folderPath : str = ".") -> List[str]:
     """
     Use this tool for listing the files in the given folder.
@@ -37,7 +30,7 @@ def read_folder_structure(folderPath : str = ".") -> List[str]:
 
     files_list = []
 
-    for root,files in os.walk(folderPath):
+    for root,dir, files in os.walk(folderPath):
         for file in files:
             if any(ex in root for ex in exclude_dirs):
                 continue
@@ -46,3 +39,12 @@ def read_folder_structure(folderPath : str = ".") -> List[str]:
             files_list.append(os.path.join(root, file))
 
     return files_list
+
+
+read_files_content_tool = StructuredTool.from_function(read_files_content,name="read_files_content")
+read_folder_structure_tool = StructuredTool.from_function(read_folder_structure,name="read_folder_structure")
+
+TOOLS=[
+    read_files_content_tool,
+    read_folder_structure_tool
+]
