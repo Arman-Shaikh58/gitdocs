@@ -64,10 +64,17 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [recentRepos, setRecentRepos] = useState<Array<{ owner: string; repo: string; addedAt: number }>>([])
   const navigate = useNavigate();
 
   useEffect(() => {
     setIsLoaded(true)
+    // Load recent repos from localStorage
+    const raw = localStorage.getItem('gitdocs:repos')
+    if (raw) {
+      const repos = JSON.parse(raw)
+      setRecentRepos(repos.sort((a: any, b: any) => b.addedAt - a.addedAt).slice(0, 6))
+    }
   }, [])
 
   const  handleSubmit=async()=> {
@@ -86,9 +93,15 @@ export default function Home() {
     });
     const data= res.data;
     if (data.status==200){
+      // Save to recent repos
+      const repoEntry = { owner: parsed.owner, repo: parsed.repo, addedAt: Date.now() }
+      const existingRepos = JSON.parse(localStorage.getItem('gitdocs:repos') || '[]')
+      const filteredRepos = existingRepos.filter((r: any) => !(r.owner === parsed.owner && r.repo === parsed.repo))
+      const updatedRepos = [repoEntry, ...filteredRepos]
+      localStorage.setItem('gitdocs:repos', JSON.stringify(updatedRepos))
+      
       console.log(`Would navigate to chat for ${parsed.owner}/${parsed.repo}`)
       navigate(`/chat/${parsed.owner}/${parsed.repo}`)
-      alert(`Starting chat for ${parsed.owner}/${parsed.repo}`)
       setIsSubmitting(false)
     }
   }
@@ -238,6 +251,45 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          {/* Recent Repositories */}
+          {recentRepos.length > 0 && (
+            <div className={`mx-auto max-w-4xl mt-12 transition-all duration-1000 delay-600 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-slate-200 mb-2">Recent Repositories</h2>
+                <p className="text-slate-400">Quick access to your recently explored repos</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {recentRepos.map((repo) => (
+                  <div key={`${repo.owner}/${repo.repo}`} className="group relative">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-300"></div>
+                    <button
+                      onClick={() => navigate(`/chat/${repo.owner}/${repo.repo}`)}
+                      className="relative w-full p-4 rounded-lg bg-slate-800/60 backdrop-blur-sm border border-white/10 hover:border-white/20 transition-all duration-300 hover:-translate-y-1 text-left group"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white">
+                            {repo.owner.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-slate-300 text-sm">{repo.owner}</span>
+                            <span className="text-white font-medium">{repo.repo}</span>
+                          </div>
+                        </div>
+                        <svg className="w-4 h-4 text-slate-400 group-hover:text-blue-400 group-hover:translate-x-1 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5-5 5M6 12h12" />
+                        </svg>
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {new Date(repo.addedAt).toLocaleDateString()}
+                      </div>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Feature highlights */}
           <div className={`mt-20 grid md:grid-cols-3 gap-8 transition-all duration-1000 delay-700 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
