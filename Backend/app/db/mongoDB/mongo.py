@@ -5,3 +5,4 @@ client =MongoClient(MONGODB_CONNECTION_STRING)
 
 db= client['gitdocs']
 topics_collection= db["topics_collection"]
+repos_collection = db['repos_collection']
