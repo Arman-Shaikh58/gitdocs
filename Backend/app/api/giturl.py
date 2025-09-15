@@ -4,7 +4,8 @@ import requests
 import os
 import uuid
 from app.db.mongoDB.mongo import repos_collection
-from app.db.chromaDB.chroma import chroma_client
+from app.db.qdrant.qdrant_setup import client
+from qdrant_client.models import VectorParams, Distance, PointStruct
 from app.utils.embeddor import create_embedding
 router = APIRouter()
 import time
@@ -59,8 +60,17 @@ def create_embeddings(folder_name: str, chunk_size: int = 500, chunk_overlap: in
         chunk_size: Number of characters per chunk.
         chunk_overlap: Number of overlapping characters between chunks.
     """
-    # Create a Chroma collection for this repo
-    collection = chroma_client.create_collection(name=folder_name)
+    # Create a Qdrant collection for this repo
+    collection = folder_name
+
+    if not client.collection_exists(collection_name=collection):
+        client.create_collection(
+            collection_name=collection,
+            vectors_config= VectorParams(
+                size=3072,
+                distance=Distance.COSINE
+            )
+        )
 
     # Walk through all files recursively
     for root, dirs, files in os.walk(folder_name):
@@ -88,14 +98,18 @@ def create_embeddings(folder_name: str, chunk_size: int = 500, chunk_overlap: in
                 for i, chunk in enumerate(chunks):
                     time.sleep(0.2)
                     embedding = create_embedding(chunk)  # or embeddor.encode(chunk)
-                    collection.add(
-                        ids=str(uuid.uuid4()),
-                        documents=[chunk],
-                        embeddings=[embedding],
-                        metadatas=[{
-                            "file_path": file_path,
-                            "chunk_index": i
-                        }]
+                    client.upsert(
+                        collection_name=collection,
+                        points=[
+                            PointStruct(
+                                id=str(uuid.uuid4()),
+                                vector=embedding,
+                                payload={
+                                    "text" : chunk,
+                                    "chunk" : i
+                                }
+                            )
+                        ]
                     )
 
                 print(f"Embedded {len(chunks)} chunks for: {file_path}")
