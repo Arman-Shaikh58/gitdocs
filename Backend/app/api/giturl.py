@@ -2,6 +2,7 @@ from fastapi import APIRouter,HTTPException
 from pydantic import BaseModel
 import requests
 import os
+import uuid
 from app.db.mongoDB.mongo import repos_collection
 from app.db.chromaDB.chroma import chroma_client
 from app.utils.embeddor import create_embedding
@@ -88,6 +89,7 @@ def create_embeddings(folder_name: str, chunk_size: int = 500, chunk_overlap: in
                     time.sleep(0.2)
                     embedding = create_embedding(chunk)  # or embeddor.encode(chunk)
                     collection.add(
+                        ids=str(uuid.uuid4()),
                         documents=[chunk],
                         embeddings=[embedding],
                         metadatas=[{

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../api/AxiosInstance';
+import { useNavigate } from 'react-router-dom';
 
 function parseGithubUrl(input: string): { owner: string; repo: string } | null {
   try {
@@ -63,6 +64,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const navigate = useNavigate();
 
   useEffect(() => {
     setIsLoaded(true)
@@ -85,6 +87,7 @@ export default function Home() {
     const data= res.data;
     if (data.status==200){
       console.log(`Would navigate to chat for ${parsed.owner}/${parsed.repo}`)
+      navigate(`/chat/${parsed.owner}/${parsed.repo}`)
       alert(`Starting chat for ${parsed.owner}/${parsed.repo}`)
       setIsSubmitting(false)
     }
