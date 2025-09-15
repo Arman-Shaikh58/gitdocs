@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "chromadb>=1.0.21",
+    "crawl4ai>=0.7.4",
     "fastapi[standard]>=0.116.1",
     "google>=3.0.0",
     "langchain>=0.3.27",
@@ -16,6 +17,7 @@ dependencies = [
     "openai>=1.107.1",
     "pymongo>=4.15.0",
     "python-dotenv>=1.1.1",
+    "qdrant-client>=1.15.1",
     "sentence-transformers>=5.1.0",
     "uvicorn>=0.35.0",
 ]

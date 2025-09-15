@@ -3,7 +3,7 @@ from pydantic import BaseModel
 import os
 from typing import List, Dict 
 from pathlib import Path
-from app.db.chromaDB.chroma import chroma_client
+from app.db.qdrant.qdrant_setup import client
 from app.utils.embeddor import create_embedding
 
 def read_files_content(filesName: List[str]) -> Dict[str, str]:
@@ -49,21 +49,23 @@ def get_context(collection_name: str, query: str, k: int = 3) -> List[str]:
     """
     try:
         # Load the collection
-        collection = chroma_client.get_collection(name=collection_name)
+        collection = client.get_collection(collection_name=collection_name)
 
         # Convert query to embedding
         query_vector = create_embedding(query)
 
-        # Query Chroma
-        results = collection.query(
-            query_embeddings=[query_vector],
-            n_results=k
+        # Query Qdrant
+        results = client.search(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            limit=k,
+            with_payload=True,
         )
 
         # Extract documents (contexts)
-        contexts = results.get("documents", [[]])[0]
+        # contexts = results.get("documents", [[]])[0]
 
-        return contexts
+        return results
 
     except Exception as e:
         print(f"Error retrieving context: {e}")
