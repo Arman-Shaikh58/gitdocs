@@ -8,6 +8,7 @@ from app.db.qdrant.qdrant_setup import client
 from qdrant_client.models import VectorParams, Distance, PointStruct
 from app.utils.embeddor import create_embedding
 router = APIRouter()
+import datetime
 import time
 
 
@@ -129,10 +130,17 @@ def create_embeddings(folder_name: str, chunk_size: int = 500, chunk_overlap: in
     - **owner** → GitHub username or organization  
     - **repo** → Repository name  
     - **token** → Optional GitHub Personal Access Token (for private repos)
-    """
+    """,
+    response_model=GitURLInput
 )
 def work_on_repo(data: GitURLInput):
     print("getting repo")
+    # Ensure DB is available
+    if repos_collection is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Database connection failed. Please check MongoDB configuration."
+        )
     # Get repo info to detect default branch
     repo_url = f"https://api.github.com/repos/{data.owner}/{data.repo}"
     repo_resp = requests.get(repo_url)
@@ -152,7 +160,34 @@ def work_on_repo(data: GitURLInput):
         branch=default_branch,
         local_dir=dir_name
     )
-    repos_collection.insert_one({'repo_name':data.repo,"repo_owner":data.owner})
+    # Insert repo record
+    try:
+        repos_collection.insert_one({'repo_name':data.repo,"repo_owner":data.owner})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save repo metadata: {str(e)}")
     create_embeddings(folder_name=dir_name)
 
     return {"status": 200, "message": f"Repository '{data.repo}' downloaded successfully"}
+
+
+@router.get("/get_repos")
+def get_repos():
+    if repos_collection is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Database connection failed. Please check MongoDB configuration."
+        )
+    try:
+        repos = repos_collection.find({}, {"_id": 0})  # exclude _id
+        if not repos:
+            return []
+        return [
+            {
+                "owner": r.get("repo_owner"),
+                "repo": r.get("repo_name"),
+                "addedAt": datetime.datetime.utcnow().isoformat()
+            }
+            for r in repos
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch repos: {str(e)}")

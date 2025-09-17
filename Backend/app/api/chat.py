@@ -37,14 +37,27 @@ def chat_about_repo(owner: str, repo_name: str, topic_id: str, query: str):
     """
     Chat with the LLM about a repo and save conversation into MongoDB.
     """
+    # Check if MongoDB is available
+    if topics_collection is None:
+        raise HTTPException(
+            status_code=503, 
+            detail="Database connection failed. Please check MongoDB configuration."
+        )
+    
     # Build conversation history
     conversation = []
     if topic_id != "new":
-        topic = topics_collection.find_one(
-            {"_id": ObjectId(topic_id), "owner": owner, "repo_name": repo_name}
-        )
-        if topic and "messages" in topic:
-            conversation = normalize_messages(topic["messages"])
+        try:
+            topic = topics_collection.find_one(
+                {"_id": ObjectId(topic_id), "owner": owner, "repo_name": repo_name}
+            )
+            if topic and "messages" in topic:
+                conversation = normalize_messages(topic["messages"])
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to retrieve conversation history: {str(e)}"
+            )
 
     # Prompt setup
     prompt = ChatPromptTemplate.from_messages([
