@@ -19,7 +19,7 @@ class GitURLInput(BaseModel):
     owner: str
     repo: str
 
-def fetch_and_save(owner, repo, path="", local_dir=None, branch="main"):
+def fetch_and_save(owner, repo, path="", local_dir=None, branch="main", base_repos_dir="Repos"):
     """
     Recursively fetch files from GitHub repo and save locally
     """
@@ -35,7 +35,9 @@ def fetch_and_save(owner, repo, path="", local_dir=None, branch="main"):
 
     contents = response.json()
     if local_dir is None:
-        local_dir = repo
+        # Create the repo directory inside the Repos folder
+        repo_name = f"{owner}_{repo}"
+        local_dir = os.path.join(base_repos_dir, repo_name)
 
     os.makedirs(local_dir, exist_ok=True)
 
@@ -50,7 +52,7 @@ def fetch_and_save(owner, repo, path="", local_dir=None, branch="main"):
                 print("Saved file:", file_local_path)
         elif item["type"] == "dir":
             new_local_dir = os.path.join(local_dir, os.path.basename(item_path))
-            fetch_and_save(owner, repo, item_path, new_local_dir, branch )
+            fetch_and_save(owner, repo, item_path, new_local_dir, branch, base_repos_dir)
 
 def create_embeddings(folder_name: str, chunk_size: int = 500, chunk_overlap: int = 50):
     """
@@ -73,11 +75,18 @@ def create_embeddings(folder_name: str, chunk_size: int = 500, chunk_overlap: in
             )
         )
 
+    # Define excluded extensions (images, pdf, office docs, etc)
+    excluded_exts = {
+        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.svg', '.webp', '.ico', '.pdf',
+        '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.odt', '.ods', '.odp', '.rtf', '.zip', '.rar', '.7z', '.tar', '.gz', '.mp3', '.mp4', '.avi', '.mov', '.mkv', '.exe', '.dll'
+    }
     # Walk through all files recursively
     for root, dirs, files in os.walk(folder_name):
         for file_name in files:
             file_path = os.path.join(root, file_name)
-
+            ext = os.path.splitext(file_path)[1].lower()
+            if ext in excluded_exts:
+                continue
             try:
                 # Read file content
                 with open(file_path, "r", encoding="utf-8") as f:
@@ -153,19 +162,23 @@ def work_on_repo(data: GitURLInput):
     default_branch = repo_resp.json().get("default_branch", "main")
 
     # Fetch and save files
-    dir_name=data.owner+'_'+data.repo
+    dir_name = f"{data.owner}_{data.repo}"
+    repos_base_dir = "Repos"
+    full_repo_path = os.path.join(repos_base_dir, dir_name)
+    
     fetch_and_save(
         owner=data.owner,
         repo=data.repo,
         branch=default_branch,
-        local_dir=dir_name
+        local_dir=full_repo_path,
+        base_repos_dir=repos_base_dir
     )
     # Insert repo record
     try:
         repos_collection.insert_one({'repo_name':data.repo,"repo_owner":data.owner})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save repo metadata: {str(e)}")
-    create_embeddings(folder_name=dir_name)
+    create_embeddings(folder_name=full_repo_path)
 
     return {"status": 200, "message": f"Repository '{data.repo}' downloaded successfully"}
 

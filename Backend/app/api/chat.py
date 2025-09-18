@@ -86,7 +86,8 @@ def chat_about_repo(owner: str, repo_name: str, topic_id: str, query: str):
             "query": query,
             "conversation": conversation,
             "TOOLS_DESC": TOOLS_DESC,
-            "collection_name": f"{owner}_{repo_name}"
+            "collection_name": f"{owner}_{repo_name}",
+            'owner_repo': f"{owner}"
         })
         answer = raw_res.get("output", str(raw_res))
     except Exception as e:
