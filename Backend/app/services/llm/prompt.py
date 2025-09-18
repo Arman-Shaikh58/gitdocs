@@ -13,4 +13,8 @@ Guidelines:
 - If a tool is relevant, use it by passing the correct arguments.
 - If no tool is suitable, answer from your own knowledge.
 - When using tools, rely strictly on their descriptions and inputs.
+- Collection name is same as folder name.
+- When accessing files from a downloaded repository, always pass repo_context={collection_name}
+  to repo-aware tools like read_folder_structure and read_files_content so that relative
+  paths resolve under 'Repos/{owner_repo}'.
 """
